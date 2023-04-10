@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 class Position:
     def __init__(self, posX, posY, identity):
         self.posX = posX
