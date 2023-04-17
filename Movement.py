@@ -1,86 +1,162 @@
 #!/usr/bin/env python3
 from math import pi
 from Position import *
-from ev3dev2.motor import MoveTank, LargeMotor
-from ev3dev2.sensor.lego import GyroSensor, ColorSensor, UltrasonicSensor
+from pick_up import *
+from ev3dev2.motor import MoveTank, MoveSteering, LargeMotor, SpeedPercent
+from ev3dev2.sensor.lego import GyroSensor, UltrasonicSensor
 
-tank_drive = MoveTank(left_motor_port="A", right_motor_port="D")
-gyro = GyroSensor(address="1")
-color = ColorSensor(address="2")
+correction_drive = MoveSteering(left_motor_port="A", right_motor_port="D")
+correction_drive.gyro = GyroSensor(address="1")
+
 ultra = UltrasonicSensor(address="3")
 
 
-def driveTo(posX, posY, iPosX, iPosY):
-    gyro.calibrate
+def drive(rotations):
+    target = correction_drive.gyro.angle
+    correction_drive.right_motor.position = 0
+    error = 0
+    last_error = 0
+    integral = 0
+    derivative = 0
+    kp = 0.20
+    kd = 0.05
+    ki = 0.22
+    while ((correction_drive.right_motor.position / 360) < rotations):
+        while (ultra.distance_inches < 6):
+            correction_drive.off()
 
-    rotationX = abs(posX - iPosX) / (1.602362 * pi)
-    rotationY = abs(posY - iPosX) / (1.602362 * pi)
-    iAngle = gyro.angle
+        currDegree = correction_drive.gyro.angle
+        error = target - currDegree
+        if (error == 0):  # prevent the integral term from 'overshooting'
+            integral = 0
+        else:
+            integral = integral + error
+        derivative = error - last_error
+
+        steer = (error * kp) + (integral * ki) + + (derivative * kd)
+        print(steer)
+        correction_drive.on(steer, 35)
+        last_error = error
+    correction_drive.off()
+
+
+def turn_right():
+    iAngle = correction_drive.gyro.angle
+    while (abs(correction_drive.gyro.angle - iAngle) < 90):
+        correction_drive.on(100, 10)
+    correction_drive.off()
+
+
+def turn_left():
+    iAngle = correction_drive.gyro.angle
+    while (abs(correction_drive.gyro.angle - iAngle) < 82):
+        correction_drive.on(-100, 10)
+    correction_drive.off()
+
+
+def turn_around():
+    iAngle = correction_drive.gyro.angle
+    while (abs(correction_drive.gyro.angle - iAngle) < 180):
+        correction_drive.on(-100, 10)
+    correction_drive.off()
+    time.sleep(0.25)
+
+
+def back_up():
+    rotation = 6 / (2.16 * pi)
+    correction_drive.on_for_rotations(0, -20, rotation)
+
+
+def driveTo(posX, posY, iPosX, iPosY):
+    # correction_drive.gyro.calibrate()
+
+    rotationX = abs(posX - iPosX) / (2.16 * pi)
+    rotationY = abs(posY - iPosY) / (2.16 * pi)
 
     # Drive to Location
-    tank_drive.on_for_rotations(35, 35, rotationY, rotationY)
-
+    drive(rotationY)
     if (posX > iPosX):
-        tank_drive.on(35, -35)
-        gyro.wait_until_angle_changed_by(-90, True)
+        if (posY > iPosY):
+            turn_right()
+        else:
+            turn_left()
     else:
-        tank_drive.on(-35, 35)
-        gyro.wait_until_angle_changed_by(90, True)
-
-    tank_drive.on_for_rotations(35, 35, rotationX, rotationX)
+        if (posY < iPosY):
+            turn_right()
+        else:
+            turn_left()
+    drive(rotationX)
     ###################
 
 
-def DriveToOtherHome(currHome, finalHome):
-    tank_drive.on(35, -35)
-    gyro.wait_until_angle_changed_by(180)
+def driveFrom(posX, posY, iPosX, iPosY):
+    # correction_drive.gyro.calibrate()
 
+    rotationX = abs(posX - iPosX) / (2.16 * pi)
+    rotationY = abs(posY - iPosY) / (2.16 * pi)
+
+    # Drive to Location
+    drive(rotationX)
+    if (posX > iPosX):
+        if (posY < iPosY):
+            turn_right()
+        else:
+            turn_left()
+    else:
+        if (posY > iPosY):
+            turn_right()
+        else:
+            turn_left()
+    drive(rotationY)
+    ###################
+
+
+def DriveToOtherHome(iPosX, iPosY, fPosX, fPosY):
+    turn_around()
     # When traveling between Home A and C or Home B and D
-    if currHome.posX == finalHome.posX:
-        rotation = abs(finalHome.posY - currHome.posY) / (1.602362 * pi)
-        tank_drive.on_for_rotations(35, 35, rotation, rotation)
+    if iPosX == fPosX:
+        rotation = abs(fPosY - iPosY) / (2.16 * pi)
+        drive(rotation)
 
     # When traveling between Home A and B or Home C and D
-    elif currHome.posY == finalHome.posY:
-        rotation = 6 / (1.602362 * pi)
-        rotationX = abs(finalHome.posX - currHome.posX) / (1.602362 * pi)
-        tank_drive.on_for_rotations(35, 35, rotation, rotation)
+    elif iPosY == fPosY:
+        rotation = 6 / (2.16 * pi)
+        rotationX = abs(fPosX - iPosX) / (2.16 * pi)
+        drive(rotation)
 
-        if (finalHome.posX > currHome.posX):
-            tank_drive.on(35, -35)
-            gyro.wait_until_angle_changed_by(-90, True)
-            tank_drive.on_for_rotations(35, 35, rotationX, rotationX)
-            tank_drive.on(35, -35)
-            gyro.wait_until_angle_changed_by(-90, True)
+        if (fPosX < iPosX):
+            turn_right()
+            drive(rotationX)
+            turn_right()
 
         else:
-            tank_drive.on(-35, 35)
-            gyro.wait_until_angle_changed_by(90, True)
-            tank_drive.on_for_rotations(35, 35, rotationX, rotationX)
-            tank_drive.on(-35, 35)
-            gyro.wait_until_angle_changed_by(90, True)
+            turn_left()
+            drive(rotationX)
+            turn_left()
 
-        tank_drive.on_for_rotations(35, 35, rotation, rotation)
+        drive(rotation)
 
     # When traveling between Home A and D or Home B and C
     else:
-        rotation = 6 / (1.602362 * pi)
-        rotationX = abs(finalHome.posX - currHome.posX) / (1.602362 * pi)
-        rotationY = (abs(finalHome.posY - currHome.posY) - 6) / (1.602362 * pi)
-        tank_drive.on_for_rotations(35, 35, rotationY, rotationY)
+        rotation = 6 / (2.16 * pi)
+        rotationX = abs(fPosX - iPosX) / (2.16 * pi)
+        rotationY = (abs(fPosY - iPosY) - 6) / (2.16 * pi)
+        correction_drive.on_for_rotations(35, 35, rotationY)
 
-        if (finalHome.posX > currHome.posX):
-            tank_drive.on(35, -35)
-            gyro.wait_until_angle_changed_by(-90, True)
-            tank_drive.on_for_rotations(35, 35, rotationX, rotationX)
-            tank_drive.on(-35, 35)
-            gyro.wait_until_angle_changed_by(90, True)
+        if (fPosX < iPosX):
+            turn_right()
+            drive(rotationX)
+            turn_right()
 
         else:
-            tank_drive.on(-35, 35)
-            gyro.wait_until_angle_changed_by(90, True)
-            tank_drive.on_for_rotations(35, 35, rotationX, rotationX)
-            tank_drive.on(-35, 35)
-            gyro.wait_until_angle_changed_by(90, True)
+            turn_left()
+            drive(rotationX)
+            turn_left()
 
-        tank_drive.on_for_rotations(35, 35, rotation, rotation)
+        drive(rotation)
+
+
+def getBox():
+    while (ultra.distance_inches > 1.2):
+        correction_drive.on(0, 5)
+    correction_drive.off()

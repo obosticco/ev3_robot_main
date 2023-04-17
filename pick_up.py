@@ -1,19 +1,72 @@
 #!/usr/bin/env python3
 from math import pi
 from ev3dev2.motor import MoveTank, LargeMotor, Motor
-from ev3dev2.sensor.lego import GyroSensor
+from ev3dev2.sensor.lego import GyroSensor, UltrasonicSensor, ColorSensor
+from ev3dev2.display import *
+import time
 
 liftDrive = Motor("C")
-#tank_drive = MoveTank(left_motor_port="A", right_motor_port="D")
+color = ColorSensor(address="2")
+display = Display()
 
-laps = 1   # int(input("Enter the number of laps: "))
-length = 30.48  # float(input("Enter the length: "))
 
-# distance required to go divided by wheels circumference
-rotations = length / (5.3975 * pi)
+def lift(degrees):
+    liftDrive.on_for_degrees(20, degrees)
 
-#tank_drive.on_for_rotations(25, 25, rotations)
-liftDrive.on_for_rotations(-100, 4)
 
-#tank_drive.on_for_rotations(-25, -25, rotations)
-#liftDrive.on_for_rotations(10, 1.5)
+def drop(degrees):
+    liftDrive.on_for_degrees(15, degrees)
+
+
+def scan(box):
+    lift(-100)
+    if (color.ambient_light_intensity == 0):
+        c1 = True
+    else:
+        c1 = False
+    lift(-100)
+    time.sleep(1)
+    if (color.ambient_light_intensity == 0):
+        c2 = True
+    else:
+        c2 = False
+    lift(-100)
+    time.sleep(1)
+    if (color.ambient_light_intensity == 0):
+        c3 = True
+    else:
+        c3 = False
+    lift(-100)
+    time.sleep(1)
+    if (color.ambient_light_intensity == 0):
+        c4 = True
+    else:
+        c4 = False
+    drop(500)
+
+    if (c1 and (not c2) and (not c3) and (not c4)):
+        if box == "B1":
+            display.text_pixels("Box 1: Correct Box")
+        else:
+            display.text_pixels("Box 1: Incorrect Box")
+    elif (c1 and (not c2) and c3 and (not c4)):
+        if box == "B2":
+            display.text_pixels("Box 2: Correct Box")
+        else:
+            display.text_pixels("Box 2: Incorrect Box")
+    elif (c1 and c2 and c3 and (not c4)):
+        if box == "B3":
+            display.text_pixels("Box 3: Correct Box")
+        else:
+            display.text_pixels("Box 3: Incorrect Box")
+    elif (c1 and (not c2) and (not c3) and c4):
+        if box == "B4":
+            display.text_pixels("Box 4: Correct Box")
+        else:
+            display.text_pixels("Box 4: Incorrect Box")
+    else:
+        display.text_pixels("Invalid")
+    display.update()
+
+
+# scan("B1")

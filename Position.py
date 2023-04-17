@@ -10,39 +10,38 @@ class Position:
 
 # Decode box location
 def decode(input):
-    match(input[0] + input[1]):
-        case 'A1':
-            row = 1
-            col = 0
-        case 'A2':
-            row = 2
-            col = 0
-        case 'C1':
-            row = 3
-            col = 0
-        case 'C2':
-            row = 4
-            col = 0
-        case 'B1':
-            row = 1
-            col = 7
-        case 'B2':
-            row = 2
-            col = 7
-        case 'D1':
-            row = 3
-            col = 7
-        case 'D2':
-            row = 4
-            col = 7
+    if (input[0] + input[1] == 'A1'):
+        y = 1
+        x = 0
+    elif (input[0] + input[1] == 'A2'):
+        y = 2
+        x = 0
+    elif (input[0] + input[1] == 'C1'):
+        y = 3
+        x = 0
+    elif (input[0] + input[1] == 'C2'):
+        y = 4
+        x = 0
+    elif (input[0] + input[1] == 'B1'):
+        y = 1
+        x = 7
+    elif (input[0] + input[1] == 'B2'):
+        y = 2
+        x = 7
+    elif (input[0] + input[1] == 'D1'):
+        y = 3
+        x = 7
+    elif (input[0] + input[1] == 'D2'):
+        y = 4
+        x = 7
 
     if (int(input[3] + input[4]) >= 1 and int(input[3] + input[4]) <= 6):
-        col += int(input[3] + input[4])
+        x += int(input[3] + input[4])
     else:
-        row += 1
-        col += (int(input[3] + input[4]) - 6)
+        y += 1
+        x += (int(input[3] + input[4]) - 6)
 
-    return row, col
+    return x, y
 
 ##################################################################
 
